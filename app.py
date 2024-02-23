@@ -50,7 +50,7 @@ if __name__ == "__main__":
     - Name the index `time_stamp`
     - Create a new column 'solar_power' as the sum of 'ppv1', 'ppv2', and 'ppv3'
     - Create a new column 'grid_power' as the 'pLoad' column
-    - Create a new column 'battery_power' as the sum of the absolute values of 'pCharge' and 'pDisCharge'
+    - Create a new column 'battery_power' as the sum of the values of 'pCharge' and 'pDisCharge'.  Charging is considered negative.
     - Convert the result to kW
     '''
 
