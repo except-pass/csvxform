@@ -30,20 +30,21 @@ def process_df(df):
     result_df.index = result_df.index.strftime('%Y/%m/%d %H:%M')
 
 
+    serial_number = df['Serial number'].iloc[0]
     #result_df needs units of kW.  The original data is in W
     result_df = result_df / 1000
-    return result_df
+    return serial_number, result_df
 
 
 if __name__ == "__main__":
     # Path to your file
     # Accept an uploaded file
     st.markdown("### Upload the xls that came from the Envy portal")
-    uploaded_file = st.file_uploader("Upload a file")
+    uploaded_files = st.file_uploader("Upload files", accept_multiple_files=True)
 
 
     if st.button("Or you can click here to use a sample file"):
-        uploaded_file = 'before.xls'
+        uploaded_files = ['before.xls']
     procedure = '''
     - Clean up the original dataframe
     - Resample to 15 minutes and average the cells
@@ -54,17 +55,38 @@ if __name__ == "__main__":
     - Convert the result to kW
     '''
 
-    if uploaded_file is not None:
-        # Read the uploaded file into a pandas DataFrame
-        df = pd.read_excel(uploaded_file)
+    results ={}
+    for uploaded_file in uploaded_files:
+        if uploaded_file is not None:
+            # Read the uploaded file into a pandas DataFrame
+            df = pd.read_excel(uploaded_file)
 
-        # Display the first few rows of the DataFrame to confirm
-        st.markdown("## Original Data")
-        st.dataframe(df)
+            # Display the first few rows of the DataFrame to confirm
+            st.markdown("## Original Data")
+            st.dataframe(df)
 
-        st.markdown(procedure)
+            st.markdown(procedure)
 
-        result = process_df(df)
-        if result is not None:
-            st.markdown("## Processed Data")
-            st.dataframe(result)
+            serial_number, result = process_df(df)
+            if result is not None:
+                st.markdown(f"## {serial_number} Processed")
+                result = result.rename(columns=lambda x: f"{serial_number}_{x}")
+                st.dataframe(result)
+                #results[serial_number] = result.rename(columns=lambda x: f"{serial_number}_{x}")
+                results[serial_number] = result
+            
+
+    master_df = pd.concat(results.values(), axis=1)
+    st.markdown("## Master Results")
+    st.dataframe(master_df)
+
+    total_battery_power = master_df.filter(like='_battery_power').sum(axis=1)
+    total_solar_power = master_df.filter(like='_solar_power').sum(axis=1)
+    total_grid_power = master_df.filter(like='_grid_power').sum(axis=1)
+
+    total_df = pd.DataFrame({'total_battery_power': total_battery_power,
+                             'total_solar_power': total_solar_power,
+                            'total_grid_power': total_grid_power
+                             }, index=master_df.index)
+    st.markdown("## Total Battery Power")
+    st.dataframe(total_df)
