@@ -1,23 +1,38 @@
 import pandas as pd
 import streamlit as st
 
+with st.sidebar:
+    st.write("Version 0.0.2")
 
-
-def process_df(df):
-    # Strip whitespace from column names
-    df.columns = df.columns.str.strip()
-    # Create a list of columns to keep
-    columns_to_keep = ['Serial number', 'Time', 'vpv1', 'vpv2', 'vpv3', 'vBat', 'soc', 'ppv1', 'ppv2', 'ppv3', 'pCharge', 'pDisCharge', 'pinv', 'prec', 'pf', 'vepsr', 'vepss', 'vepst', 'feps', 'peps', 'seps', 'pToGrid', 'pToUser', 'pLoad']
+def reduce_df(df, columns_to_keep):
     for column in columns_to_keep:
         if column not in df.columns:
             st.warning(f"Didn't find the column '{column}'.  Did you upload the right file?")
             return None
 
     # Remove columns not in the list
-    df = df[columns_to_keep]
+    df = df.loc[:,columns_to_keep]
+    return df
+
+def ensure_numeric(df):
+    for column in df.columns:
+        if not pd.api.types.is_numeric_dtype(df[column]):
+            st.error(f"This tool only works if the columns are numbers.  Check the '{column}' column.")
+            return None
+    return True
+
+def process_df(df):
+    # Strip whitespace from column names
+    df.columns = df.columns.str.strip()
+    # Create a list of columns to keep
+    columns_to_keep = ['Serial number', 'Time', 'vpv1', 'vpv2', 'vpv3', 'vBat', 'soc', 'ppv1', 'ppv2', 'ppv3', 'pCharge', 'pDisCharge', 'pinv', 'prec', 'pf', 'vepsr', 'vepss', 'vepst', 'feps', 'peps', 'seps', 'pToGrid', 'pToUser', 'pLoad']
+    df = reduce_df(df, columns_to_keep)
     df['Time'] = pd.to_datetime(df['Time'])
     df.set_index('Time', inplace=True)
     df['soc'] = df['soc'].str.replace('%', '').astype(int)
+
+    if not ensure_numeric(df):
+        return None, None
     # Resample to 15 minutes and average the cells
     df_resampled = df.resample('15min').mean()
 
@@ -76,17 +91,18 @@ if __name__ == "__main__":
                 results[serial_number] = result
             
 
-    master_df = pd.concat(results.values(), axis=1)
-    st.markdown("## Master Results")
-    st.dataframe(master_df)
+    if results:
+        master_df = pd.concat(results.values(), axis=1)
+        st.markdown("## Master Results")
+        st.dataframe(master_df)
 
-    total_battery_power = master_df.filter(like='_battery_power').sum(axis=1)
-    total_solar_power = master_df.filter(like='_solar_power').sum(axis=1)
-    total_grid_power = master_df.filter(like='_grid_power').sum(axis=1)
+        total_battery_power = master_df.filter(like='_battery_power').sum(axis=1)
+        total_solar_power = master_df.filter(like='_solar_power').sum(axis=1)
+        total_grid_power = master_df.filter(like='_grid_power').sum(axis=1)
 
-    total_df = pd.DataFrame({'total_battery_power': total_battery_power,
-                             'total_solar_power': total_solar_power,
-                            'total_grid_power': total_grid_power
-                             }, index=master_df.index)
-    st.markdown("## Total Battery Power")
-    st.dataframe(total_df)
+        total_df = pd.DataFrame({'total_battery_power': total_battery_power,
+                                'total_solar_power': total_solar_power,
+                                'total_grid_power': total_grid_power
+                                }, index=master_df.index)
+        st.markdown("## DF that sums the powers")
+        st.dataframe(total_df)
