@@ -27,8 +27,9 @@ def process_df(df, program_id):
     # Create a list of columns to keep
     columns_to_keep = ['Serial number', 'Time', 'vpv1', 'vpv2', 'vpv3', 'vBat', 'soc', 'ppv1', 'ppv2', 'ppv3', 'pCharge', 'pDisCharge', 'pinv', 'prec', 'pf', 'vepsr', 'vepss', 'vepst', 'feps', 'peps', 'seps', 'pToGrid', 'pToUser', 'pLoad']
     df = reduce_df(df, columns_to_keep)
-    df['Time'] = pd.to_datetime(df['Time'])
-    df.set_index('Time', inplace=True)
+    df['time_stamp'] = pd.to_datetime(df['Time'])
+    df.set_index('time_stamp', inplace=True)
+    df.drop('Time', axis=1, inplace=True)
     df['soc'] = df['soc'].str.replace('%', '').astype(int)
 
     if not ensure_numeric(df):
