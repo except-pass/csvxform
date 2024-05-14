@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 
 with st.sidebar:
-    st.write("Version 0.0.3")
+    st.write("Version 0.0.4")
 
 def reduce_df(df, columns_to_keep):
     for column in columns_to_keep:
@@ -59,9 +59,8 @@ if __name__ == "__main__":
     st.markdown("### Upload the xls that came from the Envy portal")
     uploaded_files = st.file_uploader("Upload files", accept_multiple_files=True)
 
-
-    if st.button("Or you can click here to use a sample file"):
-        uploaded_files = ['before.xls']
+    if st.button("Or you can click here to use sample data"):
+        uploaded_files = ['before1.xls', 'before2.xls', 'before3.xls']
     procedure = '''
     - Clean up the original dataframe
     - Resample to 15 minutes and average the cells
@@ -88,7 +87,6 @@ if __name__ == "__main__":
             if result is not None:
                 st.markdown(f"## {serial_number} Processed")
                 result = result.rename(columns=lambda x: f"{serial_number}_{x}")
-                result['program_id'] = program_id
 
                 st.dataframe(result)
                 #results[serial_number] = result.rename(columns=lambda x: f"{serial_number}_{x}")
@@ -105,11 +103,13 @@ if __name__ == "__main__":
         total_grid_power = master_df.filter(like='_grid_power').sum(axis=1)
 
 
-        total_df = pd.DataFrame({'program_id': master_df['program_id'],
+        total_df = pd.DataFrame({ 'program_id': program_id,
                                  'total_solar_power': total_solar_power.round(3),
                                  'total_battery_power': total_battery_power.round(3),
                                  'total_grid_power': total_grid_power.round(3)
                                 }, index=master_df.index)
         
         st.markdown("## DF that sums the powers")
+        total_df.index = total_df.index.astype(str)
+        #total_df['program_id'] = program_id        
         st.dataframe(total_df)
