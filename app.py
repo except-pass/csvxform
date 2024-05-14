@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 
 with st.sidebar:
-    st.write("Version 0.0.2")
+    st.write("Version 0.0.3")
 
 def reduce_df(df, columns_to_keep):
     for column in columns_to_keep:
@@ -21,7 +21,7 @@ def ensure_numeric(df):
             return None
     return True
 
-def process_df(df):
+def process_df(df, program_id):
     # Strip whitespace from column names
     df.columns = df.columns.str.strip()
     # Create a list of columns to keep
@@ -44,7 +44,6 @@ def process_df(df):
 
     result_df.index = result_df.index.strftime('%Y/%m/%d %H:%M')
 
-
     serial_number = df['Serial number'].iloc[0]
     #result_df needs units of kW.  The original data is in W
     result_df = result_df / 1000
@@ -54,6 +53,8 @@ def process_df(df):
 if __name__ == "__main__":
     # Path to your file
     # Accept an uploaded file
+    program_id = st.text_input("Enter the program ID", value="0001A")
+
     st.markdown("### Upload the xls that came from the Envy portal")
     uploaded_files = st.file_uploader("Upload files", accept_multiple_files=True)
 
@@ -82,10 +83,12 @@ if __name__ == "__main__":
 
             st.markdown(procedure)
 
-            serial_number, result = process_df(df)
+            serial_number, result = process_df(df, program_id=program_id)
             if result is not None:
                 st.markdown(f"## {serial_number} Processed")
                 result = result.rename(columns=lambda x: f"{serial_number}_{x}")
+                result['program_id'] = program_id
+
                 st.dataframe(result)
                 #results[serial_number] = result.rename(columns=lambda x: f"{serial_number}_{x}")
                 results[serial_number] = result
@@ -100,9 +103,12 @@ if __name__ == "__main__":
         total_solar_power = master_df.filter(like='_solar_power').sum(axis=1)
         total_grid_power = master_df.filter(like='_grid_power').sum(axis=1)
 
-        total_df = pd.DataFrame({'total_battery_power': total_battery_power,
-                                'total_solar_power': total_solar_power,
-                                'total_grid_power': total_grid_power
+
+        total_df = pd.DataFrame({'program_id': master_df['program_id'],
+                                 'total_solar_power': total_solar_power.round(3),
+                                 'total_battery_power': total_battery_power.round(3),
+                                 'total_grid_power': total_grid_power.round(3)
                                 }, index=master_df.index)
+        
         st.markdown("## DF that sums the powers")
         st.dataframe(total_df)
