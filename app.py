@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 
 with st.sidebar:
-    st.write("Version 0.0.4")
+    st.write("Version 0.0.5")
 
 def reduce_df(df, columns_to_keep):
     for column in columns_to_keep:
@@ -23,13 +23,14 @@ def ensure_numeric(df):
 
 def process_df(df, program_id):
     # Strip whitespace from column names
-    df.columns = df.columns.str.strip()
+    df.columns = df.columns.str.strip().str.lower()
     # Create a list of columns to keep
-    columns_to_keep = ['Serial number', 'Time', 'vpv1', 'vpv2', 'vpv3', 'vBat', 'soc', 'ppv1', 'ppv2', 'ppv3', 'pCharge', 'pDisCharge', 'pinv', 'prec', 'pf', 'vepsr', 'vepss', 'vepst', 'feps', 'peps', 'seps', 'pToGrid', 'pToUser', 'pLoad']
+    #columns_to_keep = ['Serial number', 'Time', 'vpv1', 'vpv2', 'vpv3', 'vBat', 'soc', 'ppv1', 'ppv2', 'ppv3', 'pCharge', 'pDisCharge', 'pinv', 'prec', 'pf', 'vepsr', 'vepss', 'vepst', 'feps', 'peps', 'seps', 'pToGrid', 'pToUser', 'pLoad']
+    columns_to_keep = ['serial number', 'time', 'vpv1', 'vpv2', 'vpv3', 'vbat', 'soc', 'ppv1', 'ppv2', 'ppv3', 'pcharge', 'pdischarge', 'pinv', 'prec', 'pf', 'vepsr', 'vepss', 'vepst', 'feps', 'peps', 'seps', 'ptogrid', 'ptouser', 'pload']
     df = reduce_df(df, columns_to_keep)
-    df['time_stamp'] = pd.to_datetime(df['Time'])
+    df['time_stamp'] = pd.to_datetime(df['time'])
     df.set_index('time_stamp', inplace=True)
-    df.drop('Time', axis=1, inplace=True)
+    df.drop('time', axis=1, inplace=True)
     df['soc'] = df['soc'].str.replace('%', '').astype(int)
 
     if not ensure_numeric(df):
@@ -38,14 +39,14 @@ def process_df(df, program_id):
     df_resampled = df.resample('15min').mean()
 
     df_resampled['solar_power'] = df_resampled['ppv1'] + df_resampled['ppv2'] + df_resampled['ppv3']
-    df_resampled['grid_power'] = df_resampled['pLoad'] 
+    df_resampled['grid_power'] = df_resampled['pload'] 
     #charging is negative
-    df_resampled['battery_power'] = -df_resampled['pCharge'] + df_resampled['pDisCharge']#create a new dataframe to just report the results
+    df_resampled['battery_power'] = -df_resampled['pcharge'] + df_resampled['pdischarge']#create a new dataframe to just report the results
     result_df = df_resampled[['solar_power', 'battery_power', 'grid_power']]
 
     result_df.index = result_df.index.strftime('%Y/%m/%d %H:%M')
 
-    serial_number = df['Serial number'].iloc[0]
+    serial_number = df['serial number'].iloc[0]
     #result_df needs units of kW.  The original data is in W
     result_df = result_df / 1000
     return serial_number, result_df
@@ -109,7 +110,7 @@ if __name__ == "__main__":
                                  'total_grid_power': total_grid_power.round(3)
                                 }, index=master_df.index)
         
-        st.markdown("## DF that sums the powers")
+        st.markdown("## File with sum of all power")
         total_df.index = total_df.index.astype(str)
         #total_df['program_id'] = program_id        
         st.dataframe(total_df)
